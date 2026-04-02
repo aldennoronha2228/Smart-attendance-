@@ -34,11 +34,18 @@ function buildFromBase(baseUrl: string, path: string): string | null {
 }
 
 export function resolveBackendEndpoint(path: string, endpointEnvKeys: string[]): string | null {
+  const candidates = resolveBackendEndpointCandidates(path, endpointEnvKeys);
+  return candidates[0] ?? null;
+}
+
+export function resolveBackendEndpointCandidates(path: string, endpointEnvKeys: string[]): string[] {
+  const candidates: string[] = [];
+
   for (const key of endpointEnvKeys) {
     const endpointValue = process.env[key];
     const endpointUrl = toAbsoluteUrl(endpointValue);
     if (endpointUrl) {
-      return endpointUrl;
+      candidates.push(endpointUrl);
     }
   }
 
@@ -55,11 +62,16 @@ export function resolveBackendEndpoint(path: string, endpointEnvKeys: string[]):
 
     const built = buildFromBase(base, path);
     if (built) {
-      return built;
+      candidates.push(built);
+    }
+
+    const apiBuilt = buildFromBase(base, `/api${path}`);
+    if (apiBuilt) {
+      candidates.push(apiBuilt);
     }
   }
 
-  return null;
+  return [...new Set(candidates)];
 }
 
 export async function forwardJsonOrText(upstream: Response): Promise<NextResponse> {
