@@ -1,6 +1,7 @@
 import type { TrainedStudent } from "@/utils/types";
 
 const STUDENTS_URL = "/api/students";
+const REQUEST_TIMEOUT_MS = 15000;
 
 interface StudentsPayload {
   count?: number;
@@ -37,6 +38,20 @@ function getCandidateStudentsUrls(): string[] {
   return [...new Set(candidates)];
 }
 
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 function mapStudents(payload: unknown): TrainedStudent[] {
   const record = payload && typeof payload === "object" ? (payload as StudentsPayload) : {};
   const list = Array.isArray(record.students)
@@ -66,7 +81,7 @@ export async function fetchTrainedStudents(): Promise<TrainedStudent[]> {
   for (const url of urls) {
     lastUrl = url;
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         method: "GET",
         cache: "no-store",
       });
@@ -87,6 +102,9 @@ export async function fetchTrainedStudents(): Promise<TrainedStudent[]> {
       }
     } catch (error) {
       if (error instanceof Error) {
+        if (error.name === "AbortError") {
+          throw new Error("Loading trained students timed out. Please try refresh.");
+        }
         throw error;
       }
     }
@@ -111,14 +129,17 @@ export async function deleteTrainedStudents(names: string[]): Promise<void> {
 
   let response: Response;
   try {
-    response = await fetch(STUDENTS_URL, {
+    response = await fetchWithTimeout(STUDENTS_URL, {
       method: "DELETE",
       headers: {
         "content-type": "application/json",
       },
       body: JSON.stringify({ names: trimmedNames }),
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Students delete request timed out. Please try again.");
+    }
     throw new Error("Cannot connect to students delete API.");
   }
 

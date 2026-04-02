@@ -215,7 +215,7 @@ export default function HomePage() {
         <AttendanceResult result={result} />
         <TrainedStudentsList
           students={students}
-          isLoading={isLoadingStudents || isDeletingStudents}
+          isLoading={isLoadingStudents}
           errorMessage={studentsError}
           onRefresh={() => {
             void loadTrainedStudents();
