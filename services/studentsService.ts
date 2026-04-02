@@ -1,7 +1,6 @@
 import type { TrainedStudent } from "@/utils/types";
 
 const STUDENTS_URL = "/api/students";
-const STUDENTS_URL_WITH_TRAILING_SLASH = "/api/students/";
 
 interface StudentsPayload {
   count?: number;
@@ -33,7 +32,7 @@ function getErrorMessage(payload: unknown, fallback: string): string {
 }
 
 function getCandidateStudentsUrls(): string[] {
-  const candidates = [STUDENTS_URL, STUDENTS_URL_WITH_TRAILING_SLASH];
+  const candidates = [STUDENTS_URL];
 
   return [...new Set(candidates)];
 }

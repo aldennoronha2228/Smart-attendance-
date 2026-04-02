@@ -1,10 +1,9 @@
 import type { EnrollmentResponse } from "@/utils/types";
 
 const ENROLL_URL = "/api/enroll";
-const ENROLL_URL_WITH_TRAILING_SLASH = "/api/enroll/";
 
 function getCandidateEnrollUrls(): string[] {
-  const candidates = [ENROLL_URL, ENROLL_URL_WITH_TRAILING_SLASH];
+  const candidates = [ENROLL_URL];
 
   return [...new Set(candidates)];
 }

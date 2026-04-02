@@ -2,13 +2,12 @@ import { normalizeRecognitionResponse } from "@/utils/normalizeRecognitionRespon
 import type { RecognitionResponse } from "@/utils/types";
 
 const RECOGNIZE_URL = "/api/recognize";
-const RECOGNIZE_URL_WITH_TRAILING_SLASH = "/api/recognize/";
 
 export async function recognizeFaces(imageFile: File): Promise<RecognitionResponse> {
   const formData = new FormData();
   formData.append("image", imageFile);
 
-  const urls = [RECOGNIZE_URL, RECOGNIZE_URL_WITH_TRAILING_SLASH];
+  const urls = [RECOGNIZE_URL];
 
   let response: Response;
   let lastUrl = urls[0] ?? RECOGNIZE_URL;
