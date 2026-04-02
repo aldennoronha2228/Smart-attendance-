@@ -2,31 +2,48 @@ import type { TrainedStudent } from "@/utils/types";
 
 const STUDENTS_URL =
   process.env.NEXT_PUBLIC_STUDENTS_URL ?? "http://localhost:8000/students";
+const RECOGNIZE_URL =
+  process.env.NEXT_PUBLIC_RECOGNIZE_URL ?? "http://localhost:8000/recognize";
+const ENROLL_URL = process.env.NEXT_PUBLIC_ENROLL_URL ?? "http://localhost:8000/enroll";
+const LOCAL_BACKEND_STUDENTS_URL = "http://localhost:8000/students";
 
 interface StudentsPayload {
   count?: number;
   students?: unknown;
 }
 
-export async function fetchTrainedStudents(): Promise<TrainedStudent[]> {
-  let response: Response;
+function withStudentsPath(baseUrl: string): string {
   try {
-    response = await fetch(STUDENTS_URL, {
-      method: "GET",
-      cache: "no-store",
-    });
+    const url = new URL(baseUrl);
+    url.pathname = "/students";
+    url.search = "";
+    url.hash = "";
+    return url.toString();
   } catch {
-    throw new Error(
-      `Cannot connect to students API at ${STUDENTS_URL}. Start backend server and verify NEXT_PUBLIC_STUDENTS_URL.`
-    );
+    return "";
   }
+}
 
-  if (!response.ok) {
-    throw new Error(`Failed to load trained students (${response.status}).`);
-  }
+function getCandidateStudentsUrls(): string[] {
+  const candidates = [
+    STUDENTS_URL,
+    STUDENTS_URL.endsWith("/") ? STUDENTS_URL.slice(0, -1) : `${STUDENTS_URL}/`,
+    withStudentsPath(RECOGNIZE_URL),
+    withStudentsPath(ENROLL_URL),
+    LOCAL_BACKEND_STUDENTS_URL,
+    `${LOCAL_BACKEND_STUDENTS_URL}/`,
+  ].filter((url) => url.length > 0);
 
-  const payload = (await response.json()) as StudentsPayload;
-  const list = Array.isArray(payload.students) ? payload.students : [];
+  return [...new Set(candidates)];
+}
+
+function mapStudents(payload: unknown): TrainedStudent[] {
+  const record = payload && typeof payload === "object" ? (payload as StudentsPayload) : {};
+  const list = Array.isArray(record.students)
+    ? record.students
+    : Array.isArray(payload)
+      ? payload
+      : [];
 
   return list
     .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
@@ -39,4 +56,44 @@ export async function fetchTrainedStudents(): Promise<TrainedStudent[]> {
       sample_image:
         typeof item.sample_image === "string" ? item.sample_image : null,
     }));
+}
+
+export async function fetchTrainedStudents(): Promise<TrainedStudent[]> {
+  const urls = getCandidateStudentsUrls();
+  let lastStatus: number | null = null;
+  let lastUrl = urls[0] ?? STUDENTS_URL;
+
+  for (const url of urls) {
+    lastUrl = url;
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (response.ok) {
+        const payload: unknown = await response.json().catch(() => ({}));
+        return mapStudents(payload);
+      }
+
+      lastStatus = response.status;
+      if (response.status !== 404) {
+        throw new Error(`Failed to load trained students (${response.status}) from ${url}.`);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("Failed to load trained students")) {
+        throw error;
+      }
+    }
+  }
+
+  if (lastStatus === 404) {
+    throw new Error(
+      `Failed to load trained students (404) from ${lastUrl}. Check NEXT_PUBLIC_STUDENTS_URL and restart Next.js after editing .env.local.`
+    );
+  }
+
+  throw new Error(
+    `Cannot connect to students API. Tried: ${urls.join(", ")}. Start backend server and verify endpoint URLs.`
+  );
 }

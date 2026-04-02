@@ -7,6 +7,7 @@ interface TrainedStudentsListProps {
   isLoading: boolean;
   errorMessage: string | null;
   onRefresh: () => void;
+  onEditStudent: (name: string) => void;
 }
 
 function formatDate(value?: string | null): string {
@@ -27,15 +28,16 @@ export function TrainedStudentsList({
   isLoading,
   errorMessage,
   onRefresh,
+  onEditStudent,
 }: TrainedStudentsListProps) {
   return (
-    <section className="mt-6 rounded-2xl border border-card-border bg-card p-6 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-xl font-bold text-slate-900">Trained Students</h3>
+    <section className="mt-6 rounded-2xl border border-card-border bg-card p-4 shadow-sm sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+        <h3 className="text-lg font-bold text-slate-900 sm:text-xl">Trained Students</h3>
         <button
           type="button"
           onClick={onRefresh}
-          className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-sky-50"
+          className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-sky-50 sm:w-auto sm:py-2"
         >
           Refresh
         </button>
@@ -64,7 +66,16 @@ export function TrainedStudentsList({
               key={student.name}
               className="rounded-lg border border-sky-100 bg-white p-3"
             >
-              <p className="text-sm font-semibold text-slate-800">{student.name}</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-800">{student.name}</p>
+                <button
+                  type="button"
+                  onClick={() => onEditStudent(student.name)}
+                  className="rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100"
+                >
+                  Edit
+                </button>
+              </div>
               <p className="mt-1 text-xs text-slate-500">
                 Samples used: {student.samples_used}
               </p>

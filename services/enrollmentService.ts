@@ -1,8 +1,42 @@
 import type { EnrollmentResponse } from "@/utils/types";
 
 const ENROLL_URL = process.env.NEXT_PUBLIC_ENROLL_URL ?? "http://localhost:8000/enroll";
+const RECOGNIZE_URL =
+  process.env.NEXT_PUBLIC_RECOGNIZE_URL ?? "http://localhost:8000/recognize";
+const STUDENTS_URL = process.env.NEXT_PUBLIC_STUDENTS_URL ?? "http://localhost:8000/students";
+const LOCAL_BACKEND_ENROLL_URL = "http://localhost:8000/enroll";
+
+function withEnrollPath(baseUrl: string): string {
+  try {
+    const url = new URL(baseUrl);
+    url.pathname = "/enroll";
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+function getCandidateEnrollUrls(): string[] {
+  const candidates = [
+    ENROLL_URL,
+    ENROLL_URL.endsWith("/") ? ENROLL_URL.slice(0, -1) : `${ENROLL_URL}/`,
+    withEnrollPath(RECOGNIZE_URL),
+    withEnrollPath(STUDENTS_URL),
+    LOCAL_BACKEND_ENROLL_URL,
+    `${LOCAL_BACKEND_ENROLL_URL}/`,
+  ].filter((url) => url.length > 0);
+
+  return [...new Set(candidates)];
+}
 
 function getErrorMessage(payload: unknown, fallback: string): string {
+  if (typeof payload === "string") {
+    const text = payload.trim();
+    return text.length > 0 ? text : fallback;
+  }
+
   if (!payload || typeof payload !== "object") {
     return fallback;
   }
@@ -11,38 +45,116 @@ function getErrorMessage(payload: unknown, fallback: string): string {
   if (typeof record.detail === "string") {
     return record.detail;
   }
+  if (record.detail && typeof record.detail === "object" && !Array.isArray(record.detail)) {
+    const detailRecord = record.detail as Record<string, unknown>;
+    if (typeof detailRecord.message === "string") {
+      const skippedReasons = Array.isArray(detailRecord.skipped_reasons)
+        ? detailRecord.skipped_reasons.filter(
+            (reason): reason is string => typeof reason === "string"
+          )
+        : [];
+
+      if (skippedReasons.length > 0) {
+        return `${detailRecord.message}. ${skippedReasons.join("; ")}`;
+      }
+
+      return detailRecord.message;
+    }
+  }
+  if (Array.isArray(record.detail)) {
+    const firstValidationMessage = record.detail
+      .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+      .map((item) => item.msg)
+      .find((msg): msg is string => typeof msg === "string");
+
+    if (firstValidationMessage) {
+      return firstValidationMessage;
+    }
+  }
   if (typeof record.message === "string") {
     return record.message;
   }
+  if (typeof record.error === "string") {
+    return record.error;
+  }
 
   return fallback;
+}
+
+function buildEnrollmentFormData(name: string, images: File[], imageField: string): FormData {
+  const formData = new FormData();
+  formData.append("name", name);
+  images.forEach((image) => formData.append(imageField, image));
+  return formData;
+}
+
+async function postEnrollment(
+  url: string,
+  name: string,
+  images: File[],
+  imageField: string
+): Promise<{ response: Response; payload: unknown }> {
+  const response = await fetch(url, {
+    method: "POST",
+    body: buildEnrollmentFormData(name, images, imageField),
+  });
+
+  const payload: unknown = await response
+    .json()
+    .catch(async () => response.text().catch(() => ""));
+  return { response, payload };
 }
 
 export async function enrollStudent(
   name: string,
   images: File[]
 ): Promise<EnrollmentResponse> {
-  const formData = new FormData();
-  formData.append("name", name);
-  images.forEach((image) => formData.append("images", image));
+  const urls = getCandidateEnrollUrls();
+  let response: Response | null = null;
+  let payload: unknown = {};
+  let lastUrl = urls[0] ?? ENROLL_URL;
 
-  let response: Response;
   try {
-    response = await fetch(ENROLL_URL, {
-      method: "POST",
-      body: formData,
-    });
+    for (const url of urls) {
+      lastUrl = url;
+
+      const primary = await postEnrollment(url, name, images, "images");
+      response = primary.response;
+      payload = primary.payload;
+
+      if (response.ok) {
+        break;
+      }
+
+      // Some backends use "files" instead of "images" for multipart lists.
+      if (response.status === 400) {
+        const retry = await postEnrollment(url, name, images, "files");
+        response = retry.response;
+        payload = retry.payload;
+        if (response.ok) {
+          break;
+        }
+      }
+
+      if (response.status !== 404) {
+        break;
+      }
+    }
   } catch {
     throw new Error(
-      `Cannot connect to enrollment API at ${ENROLL_URL}. Start backend server and verify NEXT_PUBLIC_ENROLL_URL.`
+      `Cannot connect to enrollment API. Tried: ${urls.join(", ")}. Start backend server and verify NEXT_PUBLIC_ENROLL_URL.`
     );
   }
 
-  const payload: unknown = await response.json().catch(() => ({}));
+  if (!response || !response.ok) {
+    if (response?.status === 404) {
+      throw new Error(
+        `Enrollment request failed (404) from ${lastUrl}. Check NEXT_PUBLIC_ENROLL_URL and restart Next.js after editing .env.local.`
+      );
+    }
 
-  if (!response.ok) {
     throw new Error(
-      getErrorMessage(payload, `Enrollment request failed (${response.status}).`)
+      getErrorMessage(payload, `Enrollment request failed (${response?.status ?? "unknown"}).`)
     );
   }
 

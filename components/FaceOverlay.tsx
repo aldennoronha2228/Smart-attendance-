@@ -91,7 +91,7 @@ export function FaceOverlay({ imageUrl, faces }: FaceOverlayProps) {
               height: `${face.height}px`,
             }}
           >
-            <span className="absolute -top-7 left-0 rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white">
+            <span className="absolute -top-6 left-0 max-w-[9rem] truncate rounded-md bg-blue-600 px-1.5 py-0.5 text-[10px] font-semibold text-white sm:-top-7 sm:max-w-none sm:px-2 sm:py-1 sm:text-xs">
               {face.name} ({face.confidence.toFixed(1)}%)
             </span>
           </div>

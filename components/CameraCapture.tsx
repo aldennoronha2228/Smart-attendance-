@@ -153,12 +153,12 @@ export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProp
 
   if (!isCameraOpen) {
     return (
-      <div>
+      <div className="w-full sm:w-auto">
         <button
           type="button"
           onClick={startCamera}
           disabled={disabled}
-          className="rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-lg border border-sky-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2"
         >
           Open Camera
         </button>
@@ -172,7 +172,7 @@ export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProp
     <div className="w-full rounded-xl border border-sky-100 bg-sky-50/40 p-3">
       <video
         ref={videoRef}
-        className="w-full rounded-lg border border-sky-100 bg-black/90"
+        className="aspect-video w-full rounded-lg border border-sky-100 bg-black/90 object-cover"
         autoPlay
         playsInline
         muted
@@ -180,12 +180,12 @@ export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProp
         onCanPlay={() => setIsVideoReady(true)}
       />
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
         <button
           type="button"
           onClick={captureFrame}
           disabled={!isVideoReady}
-          className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2"
         >
           Capture
         </button>
@@ -195,7 +195,7 @@ export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProp
             stopCamera();
             setIsCameraOpen(false);
           }}
-          className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-sky-50"
+          className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-sky-50 sm:w-auto sm:py-2"
         >
           Close Camera
         </button>

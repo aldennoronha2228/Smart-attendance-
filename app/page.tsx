@@ -19,6 +19,9 @@ export default function HomePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showEnrollmentPanel, setShowEnrollmentPanel] = useState(false);
+  const [enrollmentPrefillName, setEnrollmentPrefillName] = useState<string | undefined>(
+    undefined
+  );
   const [students, setStudents] = useState<TrainedStudent[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [studentsError, setStudentsError] = useState<string | null>(null);
@@ -104,10 +107,10 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-b from-sky-50 via-indigo-50 to-white">
       <Navbar />
 
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
-        <section className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+      <main className="mx-auto w-full max-w-5xl px-3 py-4 sm:px-6 sm:py-8">
+        <section className="rounded-2xl border border-card-border bg-card p-4 shadow-sm sm:p-6">
+          <div className="mb-4 sm:mb-6">
+            <h1 className="text-xl font-bold text-slate-900 sm:text-3xl">
               Smart Attendance System
             </h1>
             <p className="mt-2 text-sm text-muted">
@@ -116,7 +119,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mb-6 flex flex-wrap gap-3">
+          <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:flex-wrap">
             <ImageUploader
               onImageSelected={updateSelectedImage}
               disabled={isSubmitting}
@@ -127,17 +130,17 @@ export default function HomePage() {
           {previewUrl ? (
             <FaceOverlay imageUrl={previewUrl} faces={result?.recognized ?? []} />
           ) : (
-            <div className="flex min-h-56 items-center justify-center rounded-2xl border border-dashed border-sky-200 bg-sky-50/60 text-sm text-slate-500">
+            <div className="flex min-h-44 items-center justify-center rounded-2xl border border-dashed border-sky-200 bg-sky-50/60 px-3 text-center text-sm text-slate-500 sm:min-h-56">
               Image preview will appear here.
             </div>
           )}
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:mt-6 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
             <button
               type="button"
               onClick={handleSubmit}
               disabled={!selectedImage || isSubmitting}
-              className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2"
             >
               {isSubmitting ? (
                 <>
@@ -152,16 +155,19 @@ export default function HomePage() {
             <button
               type="button"
               onClick={handleReset}
-              className="rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-sky-50"
+              className="w-full rounded-lg border border-sky-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-sky-50 sm:w-auto sm:py-2"
             >
               Reset
             </button>
 
             <button
               type="button"
-              onClick={() => setShowEnrollmentPanel((current) => !current)}
+              onClick={() => {
+                setEnrollmentPrefillName(undefined);
+                setShowEnrollmentPanel((current) => !current);
+              }}
               disabled={isSubmitting}
-              className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2"
             >
               {showEnrollmentPanel ? "Close Training" : "Add Person & Train"}
             </button>
@@ -177,6 +183,7 @@ export default function HomePage() {
             <EnrollmentPanel
               disabled={isSubmitting}
               onEnrollmentSuccess={loadTrainedStudents}
+              prefillName={enrollmentPrefillName}
             />
           ) : null}
         </section>
@@ -188,6 +195,10 @@ export default function HomePage() {
           errorMessage={studentsError}
           onRefresh={() => {
             void loadTrainedStudents();
+          }}
+          onEditStudent={(name) => {
+            setEnrollmentPrefillName(name);
+            setShowEnrollmentPanel(true);
           }}
         />
       </main>

@@ -23,7 +23,7 @@ export function ImageUploader({
   };
 
   return (
-    <label className="inline-flex cursor-pointer items-center rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-sky-50">
+    <label className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg border border-sky-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-sky-50 sm:w-auto sm:py-2">
       Upload Image
       <input
         type="file"
