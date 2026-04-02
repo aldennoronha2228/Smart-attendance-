@@ -8,6 +8,9 @@ interface CameraCaptureProps {
 }
 
 export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProps) {
+  const [cameraFacingMode, setCameraFacingMode] = useState<"user" | "environment">(
+    "environment"
+  );
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -69,7 +72,7 @@ export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProp
     }
   }, []);
 
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (requestedFacingMode?: "user" | "environment") => {
     setCameraError(null);
     setIsVideoReady(false);
 
@@ -84,10 +87,31 @@ export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProp
         return;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: false,
-      });
+      const facingMode = requestedFacingMode ?? cameraFacingMode;
+      stopCamera();
+
+      // Prefer exact facing mode on mobile, then gracefully fall back.
+      const stream = await navigator.mediaDevices
+        .getUserMedia({
+          video: {
+            facingMode: { exact: facingMode },
+          },
+          audio: false,
+        })
+        .catch(() =>
+          navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: facingMode },
+            },
+            audio: false,
+          })
+        )
+        .catch(() =>
+          navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          })
+        );
 
       streamRef.current = stream;
       setIsCameraOpen(true);
@@ -97,7 +121,16 @@ export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProp
       stopCamera();
       setIsCameraOpen(false);
     }
-  }, [attachStreamToVideo, stopCamera]);
+  }, [attachStreamToVideo, cameraFacingMode, stopCamera]);
+
+  const handleSwitchCamera = useCallback(() => {
+    const nextFacingMode = cameraFacingMode === "user" ? "environment" : "user";
+    setCameraFacingMode(nextFacingMode);
+
+    if (isCameraOpen) {
+      void startCamera(nextFacingMode);
+    }
+  }, [cameraFacingMode, isCameraOpen, startCamera]);
 
   const captureFrame = useCallback(() => {
     const video = videoRef.current;
@@ -169,10 +202,23 @@ export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProp
   }
 
   return (
-    <div className="w-full rounded-xl border border-sky-100 bg-sky-50/40 p-3">
+    <div className="fixed inset-0 z-50 flex w-full flex-col bg-black p-3 sm:static sm:z-auto sm:rounded-xl sm:border sm:border-sky-100 sm:bg-sky-50/40">
+      <div className="mb-2 flex items-center justify-between sm:mb-0">
+        <p className="text-sm font-semibold text-white sm:hidden">
+          {cameraFacingMode === "environment" ? "Back Camera" : "Front Camera"}
+        </p>
+        <button
+          type="button"
+          onClick={handleSwitchCamera}
+          className="rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20 sm:ml-auto sm:border-sky-200 sm:bg-white sm:text-slate-700 sm:hover:bg-sky-50"
+        >
+          {cameraFacingMode === "environment" ? "Use Front Camera" : "Use Back Camera"}
+        </button>
+      </div>
+
       <video
         ref={videoRef}
-        className="aspect-video w-full rounded-lg border border-sky-100 bg-black/90 object-cover"
+        className="h-[72vh] w-full rounded-lg border border-white/20 bg-black/90 object-contain sm:mt-3 sm:h-auto sm:aspect-video sm:border-sky-100"
         autoPlay
         playsInline
         muted
