@@ -86,7 +86,7 @@ export async function fetchTrainedStudents(): Promise<TrainedStudent[]> {
         );
       }
     } catch (error) {
-      if (error instanceof Error && error.message.startsWith("Failed to load trained students")) {
+      if (error instanceof Error) {
         throw error;
       }
     }
@@ -94,7 +94,7 @@ export async function fetchTrainedStudents(): Promise<TrainedStudent[]> {
 
   if (lastStatus === 404) {
     throw new Error(
-      `Failed to load trained students (404) from ${lastUrl}. Check NEXT_PUBLIC_STUDENTS_URL and restart Next.js after editing .env.local.`
+      `Failed to load trained students (404) from ${lastUrl}. Verify backend endpoint mapping with BACKEND_API_BASE_URL or STUDENTS_URL.`
     );
   }
 
