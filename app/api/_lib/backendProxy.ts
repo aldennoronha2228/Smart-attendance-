@@ -1,0 +1,65 @@
+import { NextResponse } from "next/server";
+
+const DEFAULT_BACKEND_BASE_URL = "http://localhost:8000";
+
+function toAbsoluteUrl(value?: string): string | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return new URL(value).toString();
+  } catch {
+    return null;
+  }
+}
+
+function buildFromBase(baseUrl: string, path: string): string | null {
+  const normalizedBase = toAbsoluteUrl(baseUrl);
+  if (!normalizedBase) {
+    return null;
+  }
+
+  return new URL(path, normalizedBase).toString();
+}
+
+export function resolveBackendEndpoint(path: string, endpointEnvKeys: string[]): string | null {
+  for (const key of endpointEnvKeys) {
+    const endpointValue = process.env[key];
+    const endpointUrl = toAbsoluteUrl(endpointValue);
+    if (endpointUrl) {
+      return endpointUrl;
+    }
+  }
+
+  const baseCandidates = [
+    process.env.BACKEND_API_BASE_URL,
+    process.env.NEXT_PUBLIC_API_BASE_URL,
+    process.env.NODE_ENV === "development" ? DEFAULT_BACKEND_BASE_URL : undefined,
+  ];
+
+  for (const base of baseCandidates) {
+    if (!base) {
+      continue;
+    }
+
+    const built = buildFromBase(base, path);
+    if (built) {
+      return built;
+    }
+  }
+
+  return null;
+}
+
+export async function forwardJsonOrText(upstream: Response): Promise<NextResponse> {
+  const contentType = upstream.headers.get("content-type") ?? "application/json";
+  const body = await upstream.text();
+
+  return new NextResponse(body, {
+    status: upstream.status,
+    headers: {
+      "content-type": contentType,
+    },
+  });
+}

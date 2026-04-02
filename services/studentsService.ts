@@ -1,15 +1,49 @@
 import type { TrainedStudent } from "@/utils/types";
 
-const STUDENTS_URL =
-  process.env.NEXT_PUBLIC_STUDENTS_URL ?? "http://localhost:8000/students";
-const RECOGNIZE_URL =
-  process.env.NEXT_PUBLIC_RECOGNIZE_URL ?? "http://localhost:8000/recognize";
-const ENROLL_URL = process.env.NEXT_PUBLIC_ENROLL_URL ?? "http://localhost:8000/enroll";
+const STUDENTS_URL = "/api/students";
+const RECOGNIZE_URL = "/api/recognize";
+const ENROLL_URL = "/api/enroll";
+const PUBLIC_STUDENTS_URL = process.env.NEXT_PUBLIC_STUDENTS_URL;
+const PUBLIC_RECOGNIZE_URL = process.env.NEXT_PUBLIC_RECOGNIZE_URL;
+const PUBLIC_ENROLL_URL = process.env.NEXT_PUBLIC_ENROLL_URL;
 const LOCAL_BACKEND_STUDENTS_URL = "http://localhost:8000/students";
 
 interface StudentsPayload {
   count?: number;
   students?: unknown;
+}
+
+function isLocalRuntime(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const host = window.location.hostname;
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
+function getErrorMessage(payload: unknown, fallback: string): string {
+  if (typeof payload === "string") {
+    const text = payload.trim();
+    return text.length > 0 ? text : fallback;
+  }
+
+  if (!payload || typeof payload !== "object") {
+    return fallback;
+  }
+
+  const record = payload as Record<string, unknown>;
+  if (typeof record.detail === "string") {
+    return record.detail;
+  }
+  if (typeof record.message === "string") {
+    return record.message;
+  }
+  if (typeof record.error === "string") {
+    return record.error;
+  }
+
+  return fallback;
 }
 
 function withStudentsPath(baseUrl: string): string {
@@ -25,13 +59,24 @@ function withStudentsPath(baseUrl: string): string {
 }
 
 function getCandidateStudentsUrls(): string[] {
+  const localhostCandidates = isLocalRuntime()
+    ? [LOCAL_BACKEND_STUDENTS_URL, `${LOCAL_BACKEND_STUDENTS_URL}/`]
+    : [];
+
   const candidates = [
     STUDENTS_URL,
     STUDENTS_URL.endsWith("/") ? STUDENTS_URL.slice(0, -1) : `${STUDENTS_URL}/`,
+    PUBLIC_STUDENTS_URL,
+    PUBLIC_STUDENTS_URL?.endsWith("/")
+      ? PUBLIC_STUDENTS_URL.slice(0, -1)
+      : PUBLIC_STUDENTS_URL
+        ? `${PUBLIC_STUDENTS_URL}/`
+        : "",
     withStudentsPath(RECOGNIZE_URL),
     withStudentsPath(ENROLL_URL),
-    LOCAL_BACKEND_STUDENTS_URL,
-    `${LOCAL_BACKEND_STUDENTS_URL}/`,
+    withStudentsPath(PUBLIC_RECOGNIZE_URL ?? ""),
+    withStudentsPath(PUBLIC_ENROLL_URL ?? ""),
+    ...localhostCandidates,
   ].filter((url) => url.length > 0);
 
   return [...new Set(candidates)];
@@ -78,7 +123,12 @@ export async function fetchTrainedStudents(): Promise<TrainedStudent[]> {
 
       lastStatus = response.status;
       if (response.status !== 404) {
-        throw new Error(`Failed to load trained students (${response.status}) from ${url}.`);
+        const payload: unknown = await response
+          .json()
+          .catch(async () => response.text().catch(() => ""));
+        throw new Error(
+          getErrorMessage(payload, `Failed to load trained students (${response.status}) from ${url}.`)
+        );
       }
     } catch (error) {
       if (error instanceof Error && error.message.startsWith("Failed to load trained students")) {

@@ -1,10 +1,21 @@
 import type { EnrollmentResponse } from "@/utils/types";
 
-const ENROLL_URL = process.env.NEXT_PUBLIC_ENROLL_URL ?? "http://localhost:8000/enroll";
-const RECOGNIZE_URL =
-  process.env.NEXT_PUBLIC_RECOGNIZE_URL ?? "http://localhost:8000/recognize";
-const STUDENTS_URL = process.env.NEXT_PUBLIC_STUDENTS_URL ?? "http://localhost:8000/students";
+const ENROLL_URL = "/api/enroll";
+const RECOGNIZE_URL = "/api/recognize";
+const STUDENTS_URL = "/api/students";
+const PUBLIC_ENROLL_URL = process.env.NEXT_PUBLIC_ENROLL_URL;
+const PUBLIC_RECOGNIZE_URL = process.env.NEXT_PUBLIC_RECOGNIZE_URL;
+const PUBLIC_STUDENTS_URL = process.env.NEXT_PUBLIC_STUDENTS_URL;
 const LOCAL_BACKEND_ENROLL_URL = "http://localhost:8000/enroll";
+
+function isLocalRuntime(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const host = window.location.hostname;
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
 
 function withEnrollPath(baseUrl: string): string {
   try {
@@ -19,13 +30,24 @@ function withEnrollPath(baseUrl: string): string {
 }
 
 function getCandidateEnrollUrls(): string[] {
+  const localhostCandidates = isLocalRuntime()
+    ? [LOCAL_BACKEND_ENROLL_URL, `${LOCAL_BACKEND_ENROLL_URL}/`]
+    : [];
+
   const candidates = [
     ENROLL_URL,
     ENROLL_URL.endsWith("/") ? ENROLL_URL.slice(0, -1) : `${ENROLL_URL}/`,
+    PUBLIC_ENROLL_URL,
+    PUBLIC_ENROLL_URL?.endsWith("/")
+      ? PUBLIC_ENROLL_URL.slice(0, -1)
+      : PUBLIC_ENROLL_URL
+        ? `${PUBLIC_ENROLL_URL}/`
+        : "",
     withEnrollPath(RECOGNIZE_URL),
     withEnrollPath(STUDENTS_URL),
-    LOCAL_BACKEND_ENROLL_URL,
-    `${LOCAL_BACKEND_ENROLL_URL}/`,
+    withEnrollPath(PUBLIC_RECOGNIZE_URL ?? ""),
+    withEnrollPath(PUBLIC_STUDENTS_URL ?? ""),
+    ...localhostCandidates,
   ].filter((url) => url.length > 0);
 
   return [...new Set(candidates)];
