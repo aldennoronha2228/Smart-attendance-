@@ -119,14 +119,14 @@ export async function enrollStudent(
     }
   } catch {
     throw new Error(
-      `Cannot connect to enrollment API. Tried: ${urls.join(", ")}. Start backend server and verify NEXT_PUBLIC_ENROLL_URL.`
+      `Cannot connect to enrollment API. Tried: ${urls.join(", ")}. Verify server-side BACKEND_API_BASE_URL or ENROLL_URL configuration.`
     );
   }
 
   if (!response || !response.ok) {
     if (response?.status === 404) {
       throw new Error(
-        `Enrollment request failed (404) from ${lastUrl}. Check NEXT_PUBLIC_ENROLL_URL and restart Next.js after editing .env.local.`
+        `Enrollment request failed (404) from ${lastUrl}. Verify backend endpoint mapping with BACKEND_API_BASE_URL or ENROLL_URL.`
       );
     }
 

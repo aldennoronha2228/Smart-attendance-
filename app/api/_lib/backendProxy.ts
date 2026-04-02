@@ -20,7 +20,17 @@ function buildFromBase(baseUrl: string, path: string): string | null {
     return null;
   }
 
-  return new URL(path, normalizedBase).toString();
+  try {
+    const base = new URL(normalizedBase);
+    const basePath = base.pathname.endsWith("/") ? base.pathname.slice(0, -1) : base.pathname;
+    const endpointPath = path.startsWith("/") ? path : `/${path}`;
+    base.pathname = `${basePath}${endpointPath}`.replace(/\/+/g, "/");
+    base.search = "";
+    base.hash = "";
+    return base.toString();
+  } catch {
+    return null;
+  }
 }
 
 export function resolveBackendEndpoint(path: string, endpointEnvKeys: string[]): string | null {
