@@ -189,7 +189,9 @@ export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProp
       <div className="w-full sm:w-auto">
         <button
           type="button"
-          onClick={startCamera}
+          onClick={() => {
+            void startCamera();
+          }}
           disabled={disabled}
           className="w-full rounded-lg border border-sky-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2"
         >
