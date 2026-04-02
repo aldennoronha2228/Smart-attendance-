@@ -77,7 +77,7 @@ function getCandidateStudentsUrls(): string[] {
     withStudentsPath(PUBLIC_RECOGNIZE_URL ?? ""),
     withStudentsPath(PUBLIC_ENROLL_URL ?? ""),
     ...localhostCandidates,
-  ].filter((url) => url.length > 0);
+  ].filter((url): url is string => typeof url === "string" && url.length > 0);
 
   return [...new Set(candidates)];
 }
