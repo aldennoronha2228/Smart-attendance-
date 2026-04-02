@@ -8,10 +8,17 @@ export async function recognizeFaces(imageFile: File): Promise<RecognitionRespon
   const formData = new FormData();
   formData.append("image", imageFile);
 
-  const response = await fetch(RECOGNIZE_URL, {
-    method: "POST",
-    body: formData,
-  });
+  let response: Response;
+  try {
+    response = await fetch(RECOGNIZE_URL, {
+      method: "POST",
+      body: formData,
+    });
+  } catch {
+    throw new Error(
+      `Cannot connect to recognition API at ${RECOGNIZE_URL}. Start backend server and verify NEXT_PUBLIC_RECOGNIZE_URL.`
+    );
+  }
 
   if (!response.ok) {
     throw new Error(`Recognition request failed (${response.status}).`);

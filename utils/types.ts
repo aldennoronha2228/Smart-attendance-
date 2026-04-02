@@ -17,3 +17,10 @@ export interface EnrollmentResponse {
   valid_images: number;
   skipped_images: number;
 }
+
+export interface TrainedStudent {
+  name: string;
+  samples_used: number;
+  updated_at?: string | null;
+  sample_image?: string | null;
+}

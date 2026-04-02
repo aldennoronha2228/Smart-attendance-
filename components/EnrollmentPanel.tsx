@@ -6,9 +6,13 @@ import type { EnrollmentResponse } from "@/utils/types";
 
 interface EnrollmentPanelProps {
   disabled?: boolean;
+  onEnrollmentSuccess?: () => void;
 }
 
-export function EnrollmentPanel({ disabled = false }: EnrollmentPanelProps) {
+export function EnrollmentPanel({
+  disabled = false,
+  onEnrollmentSuccess,
+}: EnrollmentPanelProps) {
   const [studentName, setStudentName] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,6 +41,7 @@ export function EnrollmentPanel({ disabled = false }: EnrollmentPanelProps) {
       setErrorMessage(null);
       const response = await enrollStudent(studentName.trim(), selectedFiles);
       setResult(response);
+      onEnrollmentSuccess?.();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Enrollment failed. Please retry."

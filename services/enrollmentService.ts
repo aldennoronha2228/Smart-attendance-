@@ -26,10 +26,17 @@ export async function enrollStudent(
   formData.append("name", name);
   images.forEach((image) => formData.append("images", image));
 
-  const response = await fetch(ENROLL_URL, {
-    method: "POST",
-    body: formData,
-  });
+  let response: Response;
+  try {
+    response = await fetch(ENROLL_URL, {
+      method: "POST",
+      body: formData,
+    });
+  } catch {
+    throw new Error(
+      `Cannot connect to enrollment API at ${ENROLL_URL}. Start backend server and verify NEXT_PUBLIC_ENROLL_URL.`
+    );
+  }
 
   const payload: unknown = await response.json().catch(() => ({}));
 

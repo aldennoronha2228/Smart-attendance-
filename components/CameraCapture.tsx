@@ -10,45 +10,101 @@ interface CameraCaptureProps {
 export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
-  const stopCamera = useCallback(() => {
-    const video = videoRef.current;
-    const mediaStream = video?.srcObject;
+  const getCameraErrorMessage = (error: unknown): string => {
+    if (!(error instanceof Error)) {
+      return "Camera access failed. Please allow permission and try again.";
+    }
 
-    if (mediaStream instanceof MediaStream && video) {
-      mediaStream.getTracks().forEach((track) => track.stop());
-      video.srcObject = null;
+    if (error.name === "NotAllowedError") {
+      return "Camera permission denied. Allow camera access in your browser settings.";
+    }
+    if (error.name === "NotFoundError") {
+      return "No camera device was found on this system.";
+    }
+    if (error.name === "NotReadableError") {
+      return "Camera is already in use by another app. Close other camera apps and retry.";
+    }
+    if (error.name === "OverconstrainedError") {
+      return "Requested camera constraints are not supported on this device.";
+    }
+    if (error.name === "SecurityError") {
+      return "Camera access blocked due to browser security restrictions.";
+    }
+
+    return `Camera error: ${error.message}`;
+  };
+
+  const stopCamera = useCallback(() => {
+    const stream = streamRef.current;
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+    }
+
+    streamRef.current = null;
+    setIsVideoReady(false);
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
+  const attachStreamToVideo = useCallback(async () => {
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream) {
+      return;
+    }
+
+    video.srcObject = stream;
+    const playPromise = video.play();
+    if (playPromise) {
+      await playPromise.catch(() => {
+        // Some browsers wait for metadata before allowing play.
+      });
     }
   }, []);
 
   const startCamera = useCallback(async () => {
     setCameraError(null);
+    setIsVideoReady(false);
 
     try {
-      const media = await navigator.mediaDevices.getUserMedia({
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraError("This browser does not support camera access.");
+        return;
+      }
+
+      if (!window.isSecureContext) {
+        setCameraError("Camera requires a secure context. Use https:// or localhost.");
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: false,
       });
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = media;
-        await videoRef.current.play();
-      }
-
+      streamRef.current = stream;
       setIsCameraOpen(true);
-    } catch {
-      setCameraError("Camera access failed. Please allow permission and try again.");
+      await attachStreamToVideo();
+    } catch (error) {
+      setCameraError(getCameraErrorMessage(error));
+      stopCamera();
+      setIsCameraOpen(false);
     }
-  }, []);
+  }, [attachStreamToVideo, stopCamera]);
 
   const captureFrame = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
     if (!video || !canvas || video.videoWidth === 0 || video.videoHeight === 0) {
-      setCameraError("Unable to capture frame. Try reopening the camera.");
+      setCameraError("Camera is still loading. Please wait a moment and capture again.");
       return;
     }
 
@@ -61,7 +117,7 @@ export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProp
       return;
     }
 
-    // Draw the current video frame and convert it to an image file for API upload.
+    // Draw current frame and convert it into an upload-ready image.
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     canvas.toBlob(
@@ -88,16 +144,27 @@ export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProp
     return () => stopCamera();
   }, [stopCamera]);
 
+  useEffect(() => {
+    if (!isCameraOpen) {
+      return;
+    }
+    void attachStreamToVideo();
+  }, [attachStreamToVideo, isCameraOpen]);
+
   if (!isCameraOpen) {
     return (
-      <button
-        type="button"
-        onClick={startCamera}
-        disabled={disabled}
-        className="rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        Open Camera
-      </button>
+      <div>
+        <button
+          type="button"
+          onClick={startCamera}
+          disabled={disabled}
+          className="rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Open Camera
+        </button>
+
+        {cameraError ? <p className="mt-2 text-sm text-red-600">{cameraError}</p> : null}
+      </div>
     );
   }
 
@@ -106,15 +173,19 @@ export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProp
       <video
         ref={videoRef}
         className="w-full rounded-lg border border-sky-100 bg-black/90"
+        autoPlay
         playsInline
         muted
+        onLoadedMetadata={() => setIsVideoReady(true)}
+        onCanPlay={() => setIsVideoReady(true)}
       />
 
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={captureFrame}
-          className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-hover"
+          disabled={!isVideoReady}
+          className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
           Capture
         </button>
@@ -130,9 +201,11 @@ export function CameraCapture({ onCapture, disabled = false }: CameraCaptureProp
         </button>
       </div>
 
-      {cameraError ? (
-        <p className="mt-3 text-sm text-red-600">{cameraError}</p>
+      {!isVideoReady ? (
+        <p className="mt-2 text-sm text-slate-500">Starting camera...</p>
       ) : null}
+
+      {cameraError ? <p className="mt-3 text-sm text-red-600">{cameraError}</p> : null}
 
       <canvas ref={canvasRef} className="hidden" />
     </div>

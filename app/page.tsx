@@ -7,8 +7,10 @@ import { EnrollmentPanel } from "@/components/EnrollmentPanel";
 import { FaceOverlay } from "@/components/FaceOverlay";
 import { ImageUploader } from "@/components/ImageUploader";
 import { Navbar } from "@/components/Navbar";
+import { TrainedStudentsList } from "@/components/TrainedStudentsList";
 import { recognizeFaces } from "@/services/recognitionService";
-import type { RecognitionResponse } from "@/utils/types";
+import { fetchTrainedStudents } from "@/services/studentsService";
+import type { RecognitionResponse, TrainedStudent } from "@/utils/types";
 
 export default function HomePage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -17,6 +19,9 @@ export default function HomePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showEnrollmentPanel, setShowEnrollmentPanel] = useState(false);
+  const [students, setStudents] = useState<TrainedStudent[]>([]);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [studentsError, setStudentsError] = useState<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
   const updateSelectedImage = useCallback((file: File, nextPreviewUrl: string) => {
@@ -66,6 +71,23 @@ export default function HomePage() {
     setIsSubmitting(false);
   }, []);
 
+  const loadTrainedStudents = useCallback(async () => {
+    try {
+      setIsLoadingStudents(true);
+      setStudentsError(null);
+      const trainedStudents = await fetchTrainedStudents();
+      setStudents(trainedStudents);
+    } catch (error) {
+      setStudentsError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load trained students."
+      );
+    } finally {
+      setIsLoadingStudents(false);
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
       if (previewUrlRef.current) {
@@ -73,6 +95,10 @@ export default function HomePage() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    void loadTrainedStudents();
+  }, [loadTrainedStudents]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 via-indigo-50 to-white">
@@ -147,10 +173,23 @@ export default function HomePage() {
             </p>
           ) : null}
 
-          {showEnrollmentPanel ? <EnrollmentPanel disabled={isSubmitting} /> : null}
+          {showEnrollmentPanel ? (
+            <EnrollmentPanel
+              disabled={isSubmitting}
+              onEnrollmentSuccess={loadTrainedStudents}
+            />
+          ) : null}
         </section>
 
         <AttendanceResult result={result} />
+        <TrainedStudentsList
+          students={students}
+          isLoading={isLoadingStudents}
+          errorMessage={studentsError}
+          onRefresh={() => {
+            void loadTrainedStudents();
+          }}
+        />
       </main>
     </div>
   );
