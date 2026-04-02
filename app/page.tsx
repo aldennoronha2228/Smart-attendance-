@@ -9,7 +9,7 @@ import { ImageUploader } from "@/components/ImageUploader";
 import { Navbar } from "@/components/Navbar";
 import { TrainedStudentsList } from "@/components/TrainedStudentsList";
 import { recognizeFaces } from "@/services/recognitionService";
-import { fetchTrainedStudents } from "@/services/studentsService";
+import { deleteTrainedStudents, fetchTrainedStudents } from "@/services/studentsService";
 import type { RecognitionResponse, TrainedStudent } from "@/utils/types";
 
 export default function HomePage() {
@@ -22,8 +22,10 @@ export default function HomePage() {
   const [enrollmentPrefillName, setEnrollmentPrefillName] = useState<string | undefined>(
     undefined
   );
+  const [enrollmentPrefillSamples, setEnrollmentPrefillSamples] = useState<number>(0);
   const [students, setStudents] = useState<TrainedStudent[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [isDeletingStudents, setIsDeletingStudents] = useState(false);
   const [studentsError, setStudentsError] = useState<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
@@ -88,6 +90,26 @@ export default function HomePage() {
       );
     } finally {
       setIsLoadingStudents(false);
+    }
+  }, []);
+
+  const handleDeleteStudents = useCallback(async (names: string[]) => {
+    if (names.length === 0) {
+      return;
+    }
+
+    try {
+      setIsDeletingStudents(true);
+      setStudentsError(null);
+      await deleteTrainedStudents(names);
+      const remaining = await fetchTrainedStudents();
+      setStudents(remaining);
+    } catch (error) {
+      setStudentsError(
+        error instanceof Error ? error.message : "Failed to delete selected students."
+      );
+    } finally {
+      setIsDeletingStudents(false);
     }
   }, []);
 
@@ -164,6 +186,7 @@ export default function HomePage() {
               type="button"
               onClick={() => {
                 setEnrollmentPrefillName(undefined);
+                setEnrollmentPrefillSamples(0);
                 setShowEnrollmentPanel((current) => !current);
               }}
               disabled={isSubmitting}
@@ -184,6 +207,7 @@ export default function HomePage() {
               disabled={isSubmitting}
               onEnrollmentSuccess={loadTrainedStudents}
               prefillName={enrollmentPrefillName}
+              prefillSamplesUsed={enrollmentPrefillSamples}
             />
           ) : null}
         </section>
@@ -191,15 +215,20 @@ export default function HomePage() {
         <AttendanceResult result={result} />
         <TrainedStudentsList
           students={students}
-          isLoading={isLoadingStudents}
+          isLoading={isLoadingStudents || isDeletingStudents}
           errorMessage={studentsError}
           onRefresh={() => {
             void loadTrainedStudents();
           }}
-          onEditStudent={(name) => {
-            setEnrollmentPrefillName(name);
+          onEditStudent={(student) => {
+            setEnrollmentPrefillName(student.name);
+            setEnrollmentPrefillSamples(student.samples_used);
             setShowEnrollmentPanel(true);
           }}
+          onDeleteStudents={(names) => {
+            void handleDeleteStudents(names);
+          }}
+          isDeleting={isDeletingStudents}
         />
       </main>
     </div>

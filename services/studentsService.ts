@@ -102,3 +102,32 @@ export async function fetchTrainedStudents(): Promise<TrainedStudent[]> {
     `Cannot connect to students API. Tried: ${urls.join(", ")}. Start backend server and verify endpoint URLs.`
   );
 }
+
+export async function deleteTrainedStudents(names: string[]): Promise<void> {
+  const trimmedNames = names.map((name) => name.trim()).filter((name) => name.length > 0);
+  if (trimmedNames.length === 0) {
+    return;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(STUDENTS_URL, {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ names: trimmedNames }),
+    });
+  } catch {
+    throw new Error("Cannot connect to students delete API.");
+  }
+
+  if (!response.ok) {
+    const payload: unknown = await response
+      .json()
+      .catch(async () => response.text().catch(() => ""));
+    throw new Error(
+      getErrorMessage(payload, `Failed to delete selected students (${response.status}).`)
+    );
+  }
+}

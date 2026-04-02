@@ -9,14 +9,16 @@ interface EnrollmentPanelProps {
   disabled?: boolean;
   onEnrollmentSuccess?: () => void;
   prefillName?: string;
+  prefillSamplesUsed?: number;
 }
 
 export function EnrollmentPanel({
   disabled = false,
   onEnrollmentSuccess,
   prefillName,
+  prefillSamplesUsed,
 }: EnrollmentPanelProps) {
-  const maxImages = 5;
+  const maxImages = 10;
   const allowedImageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
   const [studentName, setStudentName] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -30,6 +32,7 @@ export function EnrollmentPanel({
     }
 
     setStudentName(prefillName);
+    setSelectedFiles([]);
     setResult(null);
     setErrorMessage(null);
   }, [prefillName]);
@@ -37,6 +40,9 @@ export function EnrollmentPanel({
   const isFormInvalid = useMemo(() => {
     return studentName.trim().length === 0 || selectedFiles.length === 0;
   }, [studentName, selectedFiles]);
+
+  const existingSamples = Math.max(0, prefillSamplesUsed ?? 0);
+  const estimatedUpdatedSamples = existingSamples + selectedFiles.length;
 
   const appendFiles = (files: File[]) => {
     const validFiles = files.filter((file) => allowedImageTypes.includes(file.type));
@@ -115,11 +121,17 @@ export function EnrollmentPanel({
     <section className="mt-4 rounded-2xl border border-sky-200 bg-sky-50/60 p-4">
       <h3 className="text-base font-bold text-slate-900 sm:text-lg">Train New Student</h3>
       <p className="mt-1 text-sm text-muted">
-        Add student name and upload up to 5 images for best recognition accuracy.
+        Add student name and upload up to 10 images for best recognition accuracy.
       </p>
       <p className="mt-1 text-xs text-slate-500">
         Supported formats: JPG, PNG, WEBP. HEIC photos may fail backend validation.
       </p>
+      {prefillName ? (
+        <p className="mt-1 text-xs font-medium text-indigo-700">
+          Editing {prefillName}: current samples {existingSamples}, selected now {selectedFiles.length},
+          estimated total {estimatedUpdatedSamples}.
+        </p>
+      ) : null}
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
@@ -227,6 +239,9 @@ export function EnrollmentPanel({
         <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           {result.message}. Valid images: {result.valid_images}, skipped:{" "}
           {result.skipped_images}.
+          {prefillName
+            ? ` Updated samples estimate: ${existingSamples + result.valid_images}.`
+            : ""}
         </p>
       ) : null}
 
