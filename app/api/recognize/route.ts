@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { forwardJsonOrText, resolveBackendEndpoint } from "@/app/api/_lib/backendProxy";
 
 export async function POST(request: Request) {
-  const targetUrl = resolveBackendEndpoint("/recognize", ["RECOGNIZE_URL", "NEXT_PUBLIC_RECOGNIZE_URL"]);
+  const targetUrl = resolveBackendEndpoint("/recognize", ["RECOGNIZE_URL"]);
   if (!targetUrl) {
     return NextResponse.json(
       { detail: "Backend recognize endpoint is not configured." },

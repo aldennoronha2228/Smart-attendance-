@@ -1,25 +1,11 @@
 import type { TrainedStudent } from "@/utils/types";
 
 const STUDENTS_URL = "/api/students";
-const RECOGNIZE_URL = "/api/recognize";
-const ENROLL_URL = "/api/enroll";
-const PUBLIC_STUDENTS_URL = process.env.NEXT_PUBLIC_STUDENTS_URL;
-const PUBLIC_RECOGNIZE_URL = process.env.NEXT_PUBLIC_RECOGNIZE_URL;
-const PUBLIC_ENROLL_URL = process.env.NEXT_PUBLIC_ENROLL_URL;
-const LOCAL_BACKEND_STUDENTS_URL = "http://localhost:8000/students";
+const STUDENTS_URL_WITH_TRAILING_SLASH = "/api/students/";
 
 interface StudentsPayload {
   count?: number;
   students?: unknown;
-}
-
-function isLocalRuntime(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  const host = window.location.hostname;
-  return host === "localhost" || host === "127.0.0.1" || host === "::1";
 }
 
 function getErrorMessage(payload: unknown, fallback: string): string {
@@ -46,38 +32,8 @@ function getErrorMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-function withStudentsPath(baseUrl: string): string {
-  try {
-    const url = new URL(baseUrl);
-    url.pathname = "/students";
-    url.search = "";
-    url.hash = "";
-    return url.toString();
-  } catch {
-    return "";
-  }
-}
-
 function getCandidateStudentsUrls(): string[] {
-  const localhostCandidates = isLocalRuntime()
-    ? [LOCAL_BACKEND_STUDENTS_URL, `${LOCAL_BACKEND_STUDENTS_URL}/`]
-    : [];
-
-  const candidates = [
-    STUDENTS_URL,
-    STUDENTS_URL.endsWith("/") ? STUDENTS_URL.slice(0, -1) : `${STUDENTS_URL}/`,
-    PUBLIC_STUDENTS_URL,
-    PUBLIC_STUDENTS_URL?.endsWith("/")
-      ? PUBLIC_STUDENTS_URL.slice(0, -1)
-      : PUBLIC_STUDENTS_URL
-        ? `${PUBLIC_STUDENTS_URL}/`
-        : "",
-    withStudentsPath(RECOGNIZE_URL),
-    withStudentsPath(ENROLL_URL),
-    withStudentsPath(PUBLIC_RECOGNIZE_URL ?? ""),
-    withStudentsPath(PUBLIC_ENROLL_URL ?? ""),
-    ...localhostCandidates,
-  ].filter((url): url is string => typeof url === "string" && url.length > 0);
+  const candidates = [STUDENTS_URL, STUDENTS_URL_WITH_TRAILING_SLASH];
 
   return [...new Set(candidates)];
 }

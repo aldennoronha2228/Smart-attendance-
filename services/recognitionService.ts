@@ -2,15 +2,13 @@ import { normalizeRecognitionResponse } from "@/utils/normalizeRecognitionRespon
 import type { RecognitionResponse } from "@/utils/types";
 
 const RECOGNIZE_URL = "/api/recognize";
-const PUBLIC_RECOGNIZE_URL = process.env.NEXT_PUBLIC_RECOGNIZE_URL;
+const RECOGNIZE_URL_WITH_TRAILING_SLASH = "/api/recognize/";
 
 export async function recognizeFaces(imageFile: File): Promise<RecognitionResponse> {
   const formData = new FormData();
   formData.append("image", imageFile);
 
-  const urls = [RECOGNIZE_URL, PUBLIC_RECOGNIZE_URL].filter(
-    (url): url is string => typeof url === "string" && url.length > 0
-  );
+  const urls = [RECOGNIZE_URL, RECOGNIZE_URL_WITH_TRAILING_SLASH];
 
   let response: Response;
   let lastUrl = urls[0] ?? RECOGNIZE_URL;
@@ -29,7 +27,7 @@ export async function recognizeFaces(imageFile: File): Promise<RecognitionRespon
     }
   } catch {
     throw new Error(
-      `Cannot connect to recognition API. Tried: ${urls.join(", ")}. Start backend server and verify NEXT_PUBLIC_RECOGNIZE_URL.`
+      `Cannot connect to recognition API. Tried: ${urls.join(", ")}. Start backend server and verify API proxy configuration.`
     );
   }
 

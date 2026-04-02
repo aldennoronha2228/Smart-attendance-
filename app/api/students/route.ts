@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { forwardJsonOrText, resolveBackendEndpoint } from "@/app/api/_lib/backendProxy";
 
 export async function GET() {
-  const targetUrl = resolveBackendEndpoint("/students", ["STUDENTS_URL", "NEXT_PUBLIC_STUDENTS_URL"]);
+  const targetUrl = resolveBackendEndpoint("/students", ["STUDENTS_URL"]);
   if (!targetUrl) {
     return NextResponse.json(
       { detail: "Backend students endpoint is not configured." },
