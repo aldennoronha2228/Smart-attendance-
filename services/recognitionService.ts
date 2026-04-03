@@ -2,7 +2,7 @@ import { normalizeRecognitionResponse } from "@/utils/normalizeRecognitionRespon
 import type { RecognitionResponse } from "@/utils/types";
 
 const RECOGNIZE_URL = "/api/recognize";
-const REQUEST_TIMEOUT_MS = 30000;
+const REQUEST_TIMEOUT_MS = 60000;
 
 async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
@@ -42,7 +42,7 @@ export async function recognizeFaces(imageFile: File): Promise<RecognitionRespon
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error(
-        "Recognition is taking too long. Backend may be waking up. Please wait a few seconds and retry."
+        "Recognition is taking too long (60s). Backend may be slow/cold-started. Please retry."
       );
     }
     throw new Error(

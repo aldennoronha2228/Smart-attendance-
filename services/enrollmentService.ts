@@ -1,7 +1,8 @@
 import type { EnrollmentResponse } from "@/utils/types";
 
 const ENROLL_URL = "/api/enroll";
-const REQUEST_TIMEOUT_MS = 30000;
+// Training can take a while on cold-started / CPU-only deployments.
+const REQUEST_TIMEOUT_MS = 180000;
 
 async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
@@ -135,7 +136,7 @@ export async function enrollStudent(
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error(
-        "Enrollment is taking too long. Backend may be waking up. Please wait a few seconds and retry."
+        "Training is taking too long (3 min). Backend may be slow/cold-started. Please retry, or upgrade backend resources for faster training."
       );
     }
     throw new Error(
