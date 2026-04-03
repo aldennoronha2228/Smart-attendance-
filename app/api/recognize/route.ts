@@ -13,13 +13,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const formData = await request.formData();
+  const body = await request.arrayBuffer();
+  const contentType = request.headers.get("content-type");
+  const headers: Record<string, string> = {};
+  if (contentType) {
+    headers["content-type"] = contentType;
+  }
+
   let lastResponse: Response | null = null;
   try {
     for (const targetUrl of targetUrls) {
       const upstream = await fetch(targetUrl, {
         method: "POST",
-        body: formData,
+        headers,
+        body,
         cache: "no-store",
       });
 
