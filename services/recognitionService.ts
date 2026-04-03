@@ -2,6 +2,21 @@ import { normalizeRecognitionResponse } from "@/utils/normalizeRecognitionRespon
 import type { RecognitionResponse } from "@/utils/types";
 
 const RECOGNIZE_URL = "/api/recognize";
+const REQUEST_TIMEOUT_MS = 30000;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 export async function recognizeFaces(imageFile: File): Promise<RecognitionResponse> {
   const formData = new FormData();
@@ -12,7 +27,7 @@ export async function recognizeFaces(imageFile: File): Promise<RecognitionRespon
   let response: Response;
   let lastUrl = urls[0] ?? RECOGNIZE_URL;
   try {
-    response = await fetch(lastUrl, {
+    response = await fetchWithTimeout(lastUrl, {
       method: "POST",
       body: formData,
     });
@@ -24,7 +39,12 @@ export async function recognizeFaces(imageFile: File): Promise<RecognitionRespon
         body: formData,
       });
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(
+        "Recognition is taking too long. Backend may be waking up. Please wait a few seconds and retry."
+      );
+    }
     throw new Error(
       `Cannot connect to recognition API. Tried: ${urls.join(", ")}. Start backend server and verify API proxy configuration.`
     );

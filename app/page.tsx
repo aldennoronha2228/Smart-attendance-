@@ -6,7 +6,6 @@ import { CameraCapture } from "@/components/CameraCapture";
 import { EnrollmentPanel } from "@/components/EnrollmentPanel";
 import { FaceOverlay } from "@/components/FaceOverlay";
 import { ImageUploader } from "@/components/ImageUploader";
-import { Navbar } from "@/components/Navbar";
 import { TrainedStudentsList } from "@/components/TrainedStudentsList";
 import { recognizeFaces } from "@/services/recognitionService";
 import { deleteTrainedStudents, fetchTrainedStudents } from "@/services/studentsService";
@@ -127,8 +126,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 via-indigo-50 to-white">
-      <Navbar />
-
       <main className="mx-auto w-full max-w-5xl px-3 py-4 sm:px-6 sm:py-8">
         <section className="rounded-2xl border border-card-border bg-card p-4 shadow-sm sm:p-6">
           <div className="mb-4 sm:mb-6">

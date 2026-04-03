@@ -1,6 +1,21 @@
 import type { EnrollmentResponse } from "@/utils/types";
 
 const ENROLL_URL = "/api/enroll";
+const REQUEST_TIMEOUT_MS = 30000;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 function getCandidateEnrollUrls(): string[] {
   const candidates = [ENROLL_URL];
@@ -71,7 +86,7 @@ async function postEnrollment(
   images: File[],
   imageField: string
 ): Promise<{ response: Response; payload: unknown }> {
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: "POST",
     body: buildEnrollmentFormData(name, images, imageField),
   });
@@ -117,7 +132,12 @@ export async function enrollStudent(
         break;
       }
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(
+        "Enrollment is taking too long. Backend may be waking up. Please wait a few seconds and retry."
+      );
+    }
     throw new Error(
       `Cannot connect to enrollment API. Tried: ${urls.join(", ")}. Verify server-side BACKEND_API_BASE_URL or ENROLL_URL configuration.`
     );
