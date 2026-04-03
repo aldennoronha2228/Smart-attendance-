@@ -16,6 +16,7 @@ export interface EnrollmentResponse {
   message: string;
   valid_images: number;
   skipped_images: number;
+  total_samples?: number;
 }
 
 export interface TrainedStudent {

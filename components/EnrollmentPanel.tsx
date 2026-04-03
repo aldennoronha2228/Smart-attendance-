@@ -240,7 +240,7 @@ export function EnrollmentPanel({
           {result.message}. Valid images: {result.valid_images}, skipped:{" "}
           {result.skipped_images}.
           {prefillName
-            ? ` Updated samples estimate: ${existingSamples + result.valid_images}.`
+            ? ` Updated samples: ${result.total_samples ?? existingSamples + result.valid_images}.`
             : ""}
         </p>
       ) : null}
