@@ -55,13 +55,23 @@ function getErrorMessage(payload: unknown, fallback: string): string {
     }
   }
   if (Array.isArray(record.detail)) {
-    const firstValidationMessage = record.detail
+    const validationMessages = record.detail
       .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
-      .map((item) => item.msg)
-      .find((msg): msg is string => typeof msg === "string");
+      .map((item) => {
+        const msg = typeof item.msg === "string" ? item.msg : "Invalid value";
+        const loc = Array.isArray(item.loc)
+          ? item.loc.filter((part): part is string | number =>
+              typeof part === "string" || typeof part === "number"
+            )
+          : [];
 
-    if (firstValidationMessage) {
-      return firstValidationMessage;
+        const locText = loc.length > 0 ? String(loc.join(".")) : "request";
+        return `${locText}: ${msg}`;
+      })
+      .filter((text) => text.trim().length > 0);
+
+    if (validationMessages.length > 0) {
+      return validationMessages.slice(0, 2).join("; ");
     }
   }
   if (typeof record.message === "string") {
