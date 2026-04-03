@@ -91,15 +91,31 @@ function buildEnrollmentFormData(name: string, images: File[], imageField: strin
   return formData;
 }
 
+function buildEnrollmentFormDataWithNameField(
+  name: string,
+  nameField: string,
+  images: File[],
+  imageField: string
+): FormData {
+  const formData = new FormData();
+  formData.append(nameField, name);
+  images.forEach((image) => formData.append(imageField, image));
+  return formData;
+}
+
 async function postEnrollment(
   url: string,
   name: string,
   images: File[],
-  imageField: string
+  imageField: string,
+  nameField = "name"
 ): Promise<{ response: Response; payload: unknown }> {
   const response = await fetchWithTimeout(url, {
     method: "POST",
-    body: buildEnrollmentFormData(name, images, imageField),
+    body:
+      nameField === "name"
+        ? buildEnrollmentFormData(name, images, imageField)
+        : buildEnrollmentFormDataWithNameField(name, nameField, images, imageField),
   });
 
   const payload: unknown = await response
@@ -129,11 +145,31 @@ export async function enrollStudent(
         break;
       }
 
-      // Some backends use "files" instead of "images" for multipart lists.
-      if (response.status === 400) {
-        const retry = await postEnrollment(url, name, images, "files");
-        response = retry.response;
-        payload = retry.payload;
+      // Some backends use different multipart field names. FastAPI uses 422 for missing required fields.
+      if (response.status === 400 || response.status === 422) {
+        const retryFiles = await postEnrollment(url, name, images, "files");
+        response = retryFiles.response;
+        payload = retryFiles.payload;
+        if (response.ok) {
+          break;
+        }
+
+        const retryStudentName = await postEnrollment(url, name, images, "images", "student_name");
+        response = retryStudentName.response;
+        payload = retryStudentName.payload;
+        if (response.ok) {
+          break;
+        }
+
+        const retryStudentNameFiles = await postEnrollment(
+          url,
+          name,
+          images,
+          "files",
+          "student_name"
+        );
+        response = retryStudentNameFiles.response;
+        payload = retryStudentNameFiles.payload;
         if (response.ok) {
           break;
         }
