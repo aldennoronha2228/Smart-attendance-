@@ -13,23 +13,23 @@ export async function POST(request: Request) {
     );
   }
 
+  const contentType = request.headers.get("content-type");
+  const rawBody = Buffer.from(await request.arrayBuffer());
+  const upstreamHeaders: Record<string, string> = {};
+  if (contentType) {
+    upstreamHeaders["content-type"] = contentType;
+  }
+  upstreamHeaders["content-length"] = String(rawBody.byteLength);
+
   let lastResponse: Response | null = null;
   try {
     for (const targetUrl of targetUrls) {
-      const cloned = request.clone();
-      const contentType = cloned.headers.get("content-type");
-      const headers: Record<string, string> = {};
-      if (contentType) {
-        headers["content-type"] = contentType;
-      }
-
       const upstream = await fetch(targetUrl, {
         method: "POST",
-        headers,
-        body: cloned.body,
-        duplex: "half",
+        headers: upstreamHeaders,
+        body: rawBody,
         cache: "no-store",
-      } as any);
+      });
 
       lastResponse = upstream;
 

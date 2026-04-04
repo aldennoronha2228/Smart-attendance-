@@ -121,7 +121,17 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    void loadTrainedStudents();
+    const warmUp = async () => {
+      try {
+        await fetch("/api/health", { cache: "no-store" });
+      } catch {
+        // Ignore warm-up failures; downstream calls will surface real errors.
+      }
+    };
+
+    void warmUp().finally(() => {
+      void loadTrainedStudents();
+    });
   }, [loadTrainedStudents]);
 
   return (
